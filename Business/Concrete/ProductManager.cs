@@ -13,6 +13,8 @@ namespace Business.Concrete
 
 
         /* ProductManager new'lendiği zaman bize birtane IProduct referansı ver dedik */
+
+        // burada enttiy framework'e bağlı olmadık eklemeler yaptık ama bozulmadı
         IProductDal _productDal;
 
         public ProductManager(IProductDal productDal)
@@ -23,7 +25,19 @@ namespace Business.Concrete
         public List<Product> GetAll()
         {
             //İş kodları yazılır
+            // Yetkisi var mı?
             return _productDal.GetAll();
+        }
+
+        public List<Product> GetAllByCategoryId(int id)
+        {
+            // kategory id benim gönderdiğim kategory id eşit ise onları filtrele
+            return _productDal.GetAll(p=>p.CategoryId==id);
+        }
+
+        public List<Product> GetByUnitPrice(decimal min, decimal max)
+        {
+            return _productDal.GetAll(p => p.UnitPrice >= min && p.UnitPrice <= max);
         }
     }
 }
