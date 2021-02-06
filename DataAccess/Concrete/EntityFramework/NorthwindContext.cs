@@ -20,11 +20,15 @@ namespace DataAccess.Concrete.EntityFramework
 
 
         // Hangi class hangi tabloya karşılık geliyor
+
+        // DbSet<NESNE> TABLO_ADI
         public DbSet<Product> Products { get; set; }
 
         public DbSet<Category> Categories { get; set; }
 
         public DbSet<Customer> Customers { get; set; }
+
+        public DbSet<Order> Orders { get; set; }
 
 
     }
