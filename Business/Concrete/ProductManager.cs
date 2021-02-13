@@ -46,11 +46,11 @@ namespace Business.Concrete
             //İş kodları yazılır
             // Yetkisi var mı?
 
-            if (DateTime.Now.Hour == 22)
-            {
-                //MaintenanceTime bakım zamanı demek default ürün listesi null oluyor
-                return new ErrorDataResult<List<Product>>(Messages.MaintenanceTime);
-            }
+            //if (DateTime.Now.Hour == 23)
+            //{
+            //    //MaintenanceTime bakım zamanı demek default ürün listesi null oluyor
+            //    return new ErrorDataResult<List<Product>>(Messages.MaintenanceTime);
+            //}
 
             return new SuccessDataResult<List<Product>>(_productDal.GetAll(),Messages.ProductsListed);
         }
