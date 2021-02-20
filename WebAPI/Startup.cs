@@ -36,8 +36,10 @@ namespace WebAPI
             // Mimainin Adý --> Autofac, Minject, CastleWindsor, StructureMap, Lightject, DryInject --> IoC Cantainer
             // AOP --> bütün mesajlarý loglamak istediðimiz düþünelim bunun IloggerService çaðýrýrýz bunda [LogAspect] yazarak loglama yaparýz yani Business içinde business yazýlýr
             // Autofac bize AOP ikaný sunuyor bu yüzden .NET IOC container'a autofac enjekte edeceðiz
-            services.AddSingleton<IProductService, ProductManager>();
-            services.AddSingleton<IProductDal, EfProductDal>();
+            // AutoFac ile ilerleyeceðiz
+            // bu ayarlarýn yeri doðru bir yapý için burasý olamamalý autofac kullanacaðýz daha arka plana atacaðýz
+            //services.AddSingleton<IProductService, ProductManager>();
+            //services.AddSingleton<IProductDal, EfProductDal>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
