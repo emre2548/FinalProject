@@ -24,5 +24,7 @@ namespace Business.Abstract
         IResult Add(Product product); // void olan yerleri IResult yapıyoruz
 
         /* RSTFUL --> HTTP -->  */
+
+        IResult Update(Product product);
     }
 }

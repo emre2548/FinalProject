@@ -1,8 +1,10 @@
 ﻿using Business.Abstract;
+using Business.CCS;
 using Business.Constants;
 using Business.ValidationRules.FluentValidation;
 using Core.Aspects.Autofac.Validation;
 using Core.CrossCuttingConcerns.Validation;
+using Core.Utilities.Business;
 using Core.Utilities.Results;
 using DataAccess.Abstract;
 using Entities.Concrete;
@@ -10,6 +12,7 @@ using Entities.DTOs;
 using FluentValidation;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Business.Concrete
@@ -23,10 +26,16 @@ namespace Business.Concrete
 
         // burada enttiy framework'e bağlı olmadık eklemeler yaptık ama bozulmadı
         IProductDal _productDal;
-
-        public ProductManager(IProductDal productDal)
+        //ILogger _logger;
+        // dependice injection oluyor
+        /* bir Entity Manage kendisi hariç başka dalı enjekte edemez */
+        /* başka bir servisi enjete edebiliriz ileride kural değişirse her yerden değiştirmek durumunda kalmayız */
+        ICategoryService __categoryService;
+        public ProductManager(IProductDal productDal/*, ILogger logger*/,ICategoryService categoryService)
         {
             _productDal = productDal;
+            //_logger = logger;
+            __categoryService = categoryService; // sonradna eklenen kural için kategori ürünler 15'i geçemez
         }
 
         /* add methodunun productvalidator methodundaki kurallara göre doğrula demek */
@@ -63,10 +72,54 @@ namespace Business.Concrete
             /* yukarıdaki kodu tekrar yazmamak için bizim yazdıımız tools olsun */
             //ValidationTool.Validate(new ProductValidator(), product); // [ValidationAspect(typeof(ProductValidator))] satırı ekleyince sildik
 
+            // Logger için
+            //_logger.Log();
+            //try
+            //{
+            //    _productDal.Add(product);
+            //    return new SuccessResult(Messages.ProductAdded);
+            //}
+            //catch (Exception exception)
+            //{
+            //    _logger.Log();
+            //}
+            //return new ErrorResult();
+            // validation kodu aspect yapacak
+
+            // bir kategoride en fazla 10 ürün olabilir
+            //var result = _productDal.GetAll(p =>p.CategoryId == product.CategoryId).Count;
+            //if (result >= 10)
+            //{
+            //    return new ErrorResult(Messages.ProductCauntOfCategoryError);
+            //}
+            // alt satır bizim için iş kurallarını çalıştıracak
+            // yeni kural --> eğer mevcut kategori sayısı 15 geçityse sisteme yeni ürün eklenemez
+            IResult result = BusinessRules.Run(CheckIfProductNameExists(product.ProductName), 
+                CheckIfProductCountOfCategory(product.CategoryId),
+                CheckIfCategoryLimitExceded());
+            if (result != null)
+            {// kurala uymayan durum var ise
+                return result;
+            }
             _productDal.Add(product);
+            return new SuccessResult(Messages.ProductAdded);
+            //if (CheckIfProductCountOfCategory(product.CategoryId).Success)
+            //{
+            //    if (CheckIfProductNameExists(product.ProductName).Success)
+            //    {
+            //        _productDal.Add(product);
+            //        return new SuccessResult(Messages.ProductAdded);
+
+            //    }
+            //}
+            //return new ErrorResult();
+
+            // Aynı isimde ürün eklenemez
+
+            //_productDal.Add(product);
 
             // returnde 2 parametre döndürebilmek için contractor'a parametre eklemek gerek
-            return new SuccessResult(Messages.ProductAdded); // IResult yapınca bizden return bekliyor (true,"Ürün eklendi.") true kaldırıldı
+            //return new SuccessResult(Messages.ProductAdded); // IResult yapınca bizden return bekliyor (true,"Ürün eklendi.") true kaldırıldı
         }
 
         public IDataResult<List<Product>> GetAll()
@@ -80,18 +133,18 @@ namespace Business.Concrete
             //    return new ErrorDataResult<List<Product>>(Messages.MaintenanceTime);
             //}
 
-            return new SuccessDataResult<List<Product>>(_productDal.GetAll(),Messages.ProductsListed);
+            return new SuccessDataResult<List<Product>>(_productDal.GetAll(), Messages.ProductsListed);
         }
 
         public IDataResult<List<Product>> GetAllByCategoryId(int id)
         {
             // kategory id benim gönderdiğim kategory id eşit ise onları filtrele
-            return new SuccessDataResult<List<Product>>(_productDal.GetAll(p=>p.CategoryId==id)); // burada çalıştığın tipi belli ediyorsun
+            return new SuccessDataResult<List<Product>>(_productDal.GetAll(p => p.CategoryId == id)); // burada çalıştığın tipi belli ediyorsun
         }
 
         public IDataResult<Product> GetById(int productId)
         {
-            return new SuccessDataResult<Product>(_productDal.Get(p=>p.ProductId == productId));
+            return new SuccessDataResult<Product>(_productDal.Get(p => p.ProductId == productId));
         }
 
         public IDataResult<List<Product>> GetByUnitPrice(decimal min, decimal max)
@@ -108,6 +161,49 @@ namespace Business.Concrete
             //    return new ErrorDataResult<List<ProductDetailDto>>(Messages.MaintenanceTime);
             //}
             return new SuccessDataResult<List<ProductDetailDto>>(_productDal.GetProductDetails());
+        }
+
+        [ValidationAspect(typeof(ProductValidator))]
+        public IResult Update(Product product)
+        {
+            if (CheckIfProductCountOfCategory(product.CategoryId).Success)
+            {
+                _productDal.Update(product);
+                return new SuccessResult(Messages.ProductAdded);
+            }
+            return new ErrorResult();
+        }
+
+        // bu bir iş kuralı parçacığı bir servis değil bundan dolayı buraya ve private olarak yazıyourz
+        private IResult CheckIfProductCountOfCategory(int categoryId)
+        {
+            var result = _productDal.GetAll(p => p.CategoryId == categoryId).Count;
+            if (result >= 15)
+            {
+                return new ErrorResult(Messages.ProductCauntOfCategoryError);
+            }
+            return new SuccessResult();
+        }
+
+        private IResult CheckIfProductNameExists(string productName)
+        {
+            // Any() şuna uyan kayıt var mı bool döndürür
+            var result = _productDal.GetAll(p => p.ProductName == productName).Any();
+            if (result)
+            {
+                return new ErrorResult(Messages.ProductNameAlreadyExists);
+            }
+            return new SuccessResult();
+        }
+
+        private IResult CheckIfCategoryLimitExceded()
+        {
+            var result = __categoryService.GetAll();
+            if (result.Data.Count>15)
+            {
+                return new ErrorResult(Messages.CategoryLimitExceded);
+            }
+            return new SuccessResult();
         }
     }
 }
