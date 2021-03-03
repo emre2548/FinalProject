@@ -1,4 +1,5 @@
 ﻿using Business.Abstract;
+using Business.BusinessAspect.Autofac;
 using Business.CCS;
 using Business.Constants;
 using Business.ValidationRules.FluentValidation;
@@ -38,6 +39,7 @@ namespace Business.Concrete
             __categoryService = categoryService; // sonradna eklenen kural için kategori ürünler 15'i geçemez
         }
 
+        [SecuredOperation("product.add")]
         /* add methodunun productvalidator methodundaki kurallara göre doğrula demek */
         [ValidationAspect(typeof(ProductValidator))]
         public IResult Add(Product product)
