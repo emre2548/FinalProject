@@ -26,5 +26,7 @@ namespace Business.Abstract
         /* RSTFUL --> HTTP -->  */
 
         IResult Update(Product product);
+
+        IResult AddTransactionalTest(Product product);
     }
 }

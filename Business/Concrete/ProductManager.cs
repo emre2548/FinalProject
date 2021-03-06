@@ -3,6 +3,8 @@ using Business.BusinessAspect.Autofac;
 using Business.CCS;
 using Business.Constants;
 using Business.ValidationRules.FluentValidation;
+using Core.Aspects.Autofac.Caching;
+using Core.Aspects.Autofac.Transaction;
 using Core.Aspects.Autofac.Validation;
 using Core.CrossCuttingConcerns.Validation;
 using Core.Utilities.Business;
@@ -31,17 +33,18 @@ namespace Business.Concrete
         // dependice injection oluyor
         /* bir Entity Manage kendisi hariç başka dalı enjekte edemez */
         /* başka bir servisi enjete edebiliriz ileride kural değişirse her yerden değiştirmek durumunda kalmayız */
-        ICategoryService __categoryService;
+        ICategoryService _categoryService;
         public ProductManager(IProductDal productDal/*, ILogger logger*/,ICategoryService categoryService)
         {
             _productDal = productDal;
             //_logger = logger;
-            __categoryService = categoryService; // sonradna eklenen kural için kategori ürünler 15'i geçemez
+            _categoryService = categoryService; // sonradna eklenen kural için kategori ürünler 15'i geçemez
         }
 
-        [SecuredOperation("product.add")]
         /* add methodunun productvalidator methodundaki kurallara göre doğrula demek */
+        [SecuredOperation("product.add,admin")]
         [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
         public IResult Add(Product product)
         {
             // Business codes
@@ -97,7 +100,7 @@ namespace Business.Concrete
             // alt satır bizim için iş kurallarını çalıştıracak
             // yeni kural --> eğer mevcut kategori sayısı 15 geçityse sisteme yeni ürün eklenemez
             IResult result = BusinessRules.Run(CheckIfProductNameExists(product.ProductName), 
-                CheckIfProductCountOfCategory(product.CategoryId),
+                CheckIfProductCountOfCategoryCorrect(product.CategoryId),
                 CheckIfCategoryLimitExceded());
             if (result != null)
             {// kurala uymayan durum var ise
@@ -124,6 +127,9 @@ namespace Business.Concrete
             //return new SuccessResult(Messages.ProductAdded); // IResult yapınca bizden return bekliyor (true,"Ürün eklendi.") true kaldırıldı
         }
 
+        // belirli bir süre cach bellekten gelecek
+        // key, value ile bellekte tutuyoruz
+        [CacheAspect]
         public IDataResult<List<Product>> GetAll()
         {
             //İş kodları yazılır
@@ -144,6 +150,7 @@ namespace Business.Concrete
             return new SuccessDataResult<List<Product>>(_productDal.GetAll(p => p.CategoryId == id)); // burada çalıştığın tipi belli ediyorsun
         }
 
+        [CacheAspect]
         public IDataResult<Product> GetById(int productId)
         {
             return new SuccessDataResult<Product>(_productDal.Get(p => p.ProductId == productId));
@@ -166,18 +173,28 @@ namespace Business.Concrete
         }
 
         [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
+        /* bellekte içerisinde IProductService.Get olan olan her şeyi sil demek */
         public IResult Update(Product product)
         {
-            if (CheckIfProductCountOfCategory(product.CategoryId).Success)
+            //if (CheckIfProductCountOfCategoryCorrect(product.CategoryId).Success)
+            //{
+            //    _productDal.Update(product);
+            //    return new SuccessResult(Messages.ProductAdded);
+            //}
+            ////return new ErrorResult();
+            //throw new NotImplementedException();
+
+            var result = _productDal.GetAll(p => p.CategoryId == product.CategoryId).Count;
+            if (result >= 10)
             {
-                _productDal.Update(product);
-                return new SuccessResult(Messages.ProductAdded);
+                return new ErrorResult(Messages.ProductCountOfCategoryError);
             }
-            return new ErrorResult();
+            throw new NotImplementedException();
         }
 
         // bu bir iş kuralı parçacığı bir servis değil bundan dolayı buraya ve private olarak yazıyourz
-        private IResult CheckIfProductCountOfCategory(int categoryId)
+        private IResult CheckIfProductCountOfCategoryCorrect(int categoryId)
         {
             var result = _productDal.GetAll(p => p.CategoryId == categoryId).Count;
             if (result >= 15)
@@ -200,12 +217,24 @@ namespace Business.Concrete
 
         private IResult CheckIfCategoryLimitExceded()
         {
-            var result = __categoryService.GetAll();
+            var result = _categoryService.GetAll();
             if (result.Data.Count>15)
             {
                 return new ErrorResult(Messages.CategoryLimitExceded);
             }
             return new SuccessResult();
+        }
+
+        [TransactionScopeAspect]
+        public IResult AddTransactionalTest(Product product)
+        {
+            Add(product);
+            if (product.UnitPrice < 10)
+            {
+                throw new Exception("");
+            }
+            Add(product);
+            return null;
         }
     }
 }
