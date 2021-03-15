@@ -51,6 +51,8 @@ namespace WebAPI
 
             //services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
+            services.AddCors(); // frontEnd kýsmýndan eriþemeyip CORS hatasý alýnca ekledik
+
             var tokenOptions = Configuration.GetSection("TokenOptions").Get<TokenOptions>();
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -83,6 +85,9 @@ namespace WebAPI
             }
 
             /* Buraya middle name denir sýrasýyla hangi uygulamalarýn devreye gireceðiniz söylüyoruz */
+
+            // burada bu adresten gelen bütün istekelre izin ver dedik CORS hatasý ile backend bunu engelliyordu
+            app.UseCors(builder => builder.WithOrigins("http://localhost:4200").AllowAnyHeader()); // fronEnd kýsmýnda CORS hatasý alýnca ekledik
 
             app.UseHttpsRedirection();
 
