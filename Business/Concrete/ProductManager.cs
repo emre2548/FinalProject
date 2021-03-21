@@ -42,7 +42,7 @@ namespace Business.Concrete
         }
 
         /* add methodunun productvalidator methodundaki kurallara göre doğrula demek */
-        [SecuredOperation("product.add,admin")]
+        //[SecuredOperation("product.add,admin")]
         [ValidationAspect(typeof(ProductValidator))]
         [CacheRemoveAspect("IProductService.Get")]
         public IResult Add(Product product)

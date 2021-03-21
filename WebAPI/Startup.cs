@@ -83,8 +83,10 @@ namespace WebAPI
             {
                 app.UseDeveloperExceptionPage();
             }
+            // Hata yakalama midleware
+            app.ConfigureCustomExceptionMiddleware();
 
-            /* Buraya middle name denir sýrasýyla hangi uygulamalarýn devreye gireceðiniz söylüyoruz */
+            /* Buraya MIDLEWARE denir sýrasýyla hangi uygulamalarýn devreye gireceðiniz söylüyoruz */
 
             // burada bu adresten gelen bütün istekelre izin ver dedik CORS hatasý ile backend bunu engelliyordu
             app.UseCors(builder => builder.WithOrigins("http://localhost:4200").AllowAnyHeader()); // fronEnd kýsmýnda CORS hatasý alýnca ekledik
